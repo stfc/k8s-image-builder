@@ -1,0 +1,4 @@
+server = "{{ docker_io_mirror }}"
+
+[host."{{ docker_io_mirror }}"]
+  capabilities = ["pull", "resolve"]
