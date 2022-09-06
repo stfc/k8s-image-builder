@@ -17,3 +17,7 @@
     name: open-iscsi
     state: present
     update_cache: yes
+
+- name: apt-clean
+  apt:
+    clean: yes
