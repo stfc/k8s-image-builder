@@ -1,21 +1,9 @@
 ---
-- name: Create containerd configuration directory
-  file:
-    path: /etc/containerd/conf.d/
-    state: directory
-    recurse: yes
-
 - name: Create containerd certs directory for docker.io
   file:
     path: /etc/containerd/certs.d/docker.io
     state: directory
     recurse: yes
-
-- name: Copy config to point CRI to /etc/containerd/certs.d
-  copy:
-    src: cri-registry.toml
-    dest: /etc/containerd/conf.d/cri-registry.toml
-    mode: 0644
 
 - name: Copy config for docker.io mirror
   template:
