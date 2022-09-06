@@ -10,3 +10,10 @@
     src: dockerhub-hosts.toml
     dest: /etc/containerd/certs.d/docker.io/hosts.toml
     mode: 0644
+
+- name: Install the open-iscsi package
+  # This allows us to create Longhorn volumes within a cluster
+  apt:
+    name: open-iscsi
+    state: present
+    update_cache: yes
