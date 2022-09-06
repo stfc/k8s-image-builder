@@ -20,6 +20,7 @@
       "image_version": "{{user `image_version`}}",
       "location": "{{user `azure_location`}}",
       "name": "vhd-{{user `build_name`}}",
+      "os_disk_size_gb": "{{user `os_disk_size_gb`}}",
       "os_type": "Windows",
       "private_virtual_network_with_public_ip": "{{user `private_virtual_network_with_public_ip`}}",
       "resource_group_name": "{{user `resource_group_name`}}",
@@ -52,9 +53,11 @@
       "image_sku": "{{user `image_sku`}}",
       "image_version": "{{user `image_version`}}",
       "location": "{{user `azure_location`}}",
-      "managed_image_name": "{{user `image_name`}}-{{user `build_timestamp`}}",
+      "managed_image_name": "{{user `image_name`}}-{{user `runtime`}}-{{user `build_timestamp`}}",
       "managed_image_resource_group_name": "{{user `resource_group_name`}}",
+      "managed_image_storage_account_type": "{{user `storage_account_type`}}",
       "name": "sig-{{user `build_name`}}",
+      "os_disk_size_gb": "{{user `os_disk_size_gb`}}",
       "os_type": "Windows",
       "private_virtual_network_with_public_ip": "{{user `private_virtual_network_with_public_ip`}}",
       "shared_image_gallery_destination": {
@@ -64,7 +67,8 @@
         "replication_regions": [
           "{{user `replication_regions`}}"
         ],
-        "resource_group": "{{user `resource_group_name`}}"
+        "resource_group": "{{user `resource_group_name`}}",
+        "storage_account_type": "{{user `storage_account_type`}}"
       },
       "subscription_id": "{{user `subscription_id`}}",
       "type": "azure-arm",
@@ -207,8 +211,10 @@
     "kubernetes_base_url": "https://kubernetesreleases.blob.core.windows.net/kubernetes/{{user `kubernetes_semver`}}/binaries/node/windows/{{user `kubernetes_goarch`}}",
     "manifest_output": "manifest.json",
     "nssm_url": null,
+    "os_disk_size_gb": "",
     "prepull": null,
     "private_virtual_network_with_public_ip": "",
+    "storage_account_type": "",
     "subscription_id": null,
     "virtual_network_name": "",
     "virtual_network_resource_group_name": "",
