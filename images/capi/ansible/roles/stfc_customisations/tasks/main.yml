@@ -22,3 +22,62 @@
     src: dockerhub-hosts.toml
     dest: /etc/containerd/certs.d/docker.io/hosts.toml
     mode: 0644
+
+- name: Set up multiple authorized keys
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: "{{ lookup('file', '{{ item }}') }}"
+  with_fileglob:
+    - "public_keys/*"
+
+- name: Enable Universe for Alien
+  apt_repository:
+    repo: "{{ item }}"
+  loop:
+    - "deb http://archive.ubuntu.com/ubuntu/ {{ansible_distribution_release}} main"
+    - "deb http://archive.ubuntu.com/ubuntu/ {{ansible_distribution_release}} universe"
+
+- name: Copy rsyslog main config
+  copy:
+    src: rsyslog/rsyslog.conf
+    dest: /etc/rsyslog.conf
+
+- name: Copy rsyslog.d additional configs
+  copy:
+    src: "rsyslog/rsyslog.d/{{ item }}"
+    dest: /etc/rsyslog.d/
+  loop:
+    - "20-ufw.conf"
+    - "21-cloudinit.conf"
+
+- name: Install Alien for Pakiti
+  apt:
+    name: alien
+    state: present
+    update_cache: yes
+
+- name: Get Pakiti client
+  get_url:
+    url: http://repos.gridpp.rl.ac.uk/yum/pakiti_2/pakiti-client-2.1.4-3.RAL.noarch.rpm
+    dest: /tmp/pakiti-client-2.1.4-3.RAL.noarch.rpm
+
+- name: Install Pakiti using Alien
+  command:
+    cmd: "alien --install /tmp/pakiti-client-2.1.4-3.RAL.noarch.rpm"
+
+- name: Remove Alien
+  apt:
+    name: alien
+    state: absent
+
+- name: Remove universe repository
+  apt_repository:
+    repo: "deb http://archive.ubuntu.com/ubuntu/ {{ansible_distribution_release}} universe"
+    state: absent
+
+- name: Remove apt package caches
+  apt:
+    autoclean: yes
+    autoremove: yes
+    force_apt_get: yes
