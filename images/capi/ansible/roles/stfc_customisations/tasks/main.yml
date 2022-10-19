@@ -23,13 +23,16 @@
     dest: /etc/containerd/certs.d/docker.io/hosts.toml
     mode: 0644
 
+- name: Create cloud-init config dirs
+  file:
+    path: /etc/cloud/cloud.cfg.d
+    state: directory
+    recurse: yes
+
 - name: Set up multiple authorized keys
-  ansible.posix.authorized_key:
-    user: root
-    state: present
-    key: "{{ lookup('file', '{{ item }}') }}"
-  with_fileglob:
-    - "public_keys/*"
+  copy:
+    src: 50_authorized_admins.cfg
+    dest: /etc/cloud/cloud.cfg.d/50_authorized_admins.cfg
 
 - name: Enable Universe for Alien
   apt_repository:
