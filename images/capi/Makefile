@@ -198,6 +198,22 @@ ifneq (,$(strip $(SSH_PUBLIC_KEY_FILE)))
 PACKER_FLAGS += -var ssh_public_key="$(shell cat ${SSH_PUBLIC_KEY_FILE})"
 endif
 
+# Since OpenSSH 9.0+ 'scp' uses SFTP protocol instead of legacy SCP protocol, which causes building errors like:
+#
+# bash: line 1: /usr/lib/sftp-server: No such file or directory\nscp: Connection closed\r\n""
+#
+# However, -O option is not available in older OpenSSH version, so we cannot always set it as an option to use.
+# To provide better out-of-the-box experience for users with newer versions of OpenSSH, we conditionally ensure
+# -O is used when used OpenSSH version requires it.
+#
+# See https://github.com/kubernetes-sigs/image-builder/issues/859 and
+# https://github.com/hashicorp/packer-plugin-ansible/issues/100 for more details.
+ifeq ($(shell test $$(ssh -V 2>&1 | cut -d _ -f2 | cut -d . -f1) -ge 9; echo $$?),0)
+	# Use ?= to retain possible existing value of environment variable. If it is already declared, we assume user to be
+	# aware of OpenSSH version they use and it is up to the user to specify "-O" option as well if needed.
+  export ANSIBLE_SCP_EXTRA_ARGS ?= "-O"
+endif
+
 # If DEBUG=1 then Packer will set -debug, enabling debug mode for builds, providing
 # more verbose logging
 ifeq (1,$(strip $(DEBUG)))
@@ -217,6 +233,7 @@ endif
 COMMON_NODE_VAR_FILES :=	packer/config/kubernetes.json \
 					packer/config/cni.json \
 					packer/config/containerd.json \
+					packer/config/wasm-shims.json \
 					packer/config/ansible-args.json \
 					packer/config/goss-args.json \
 					packer/config/common.json \
@@ -294,8 +311,8 @@ NODE_OVA_VSPHERE_BUILD_NAMES		:=	$(addprefix node-ova-vsphere-,$(PLATFORMS_AND_V
 NODE_OVA_VSPHERE_BASE_BUILD_NAMES		:=	$(addprefix node-ova-vsphere-base-,$(PLATFORMS_AND_VERSIONS))
 NODE_OVA_VSPHERE_CLONE_BUILD_NAMES		:=	$(addprefix node-ova-vsphere-clone-,$(PLATFORMS_AND_VERSIONS))
 
-AMI_BUILD_NAMES			   ?= ami-centos-7 ami-ubuntu-1804 ami-ubuntu-2004 ami-amazon-2 ami-flatcar ami-windows-2019 ami-windows-2004 ami-rockylinux-8
-GCE_BUILD_NAMES			   ?= gce-ubuntu-1804 gce-ubuntu-2004
+AMI_BUILD_NAMES			   ?= ami-centos-7 ami-ubuntu-1804 ami-ubuntu-2004 ami-ubuntu-2204 ami-amazon-2 ami-flatcar ami-windows-2019 ami-windows-2004 ami-rockylinux-8
+GCE_BUILD_NAMES			   ?= gce-ubuntu-1804 gce-ubuntu-2004 gce-ubuntu-2204
 
 # Make needs these lists to be space delimited, no quotes
 VHD_TARGETS := $(shell grep VHD_TARGETS azure_targets.sh | sed 's/VHD_TARGETS=//' | tr -d \")
@@ -305,11 +322,11 @@ AZURE_BUILD_VHD_NAMES	   ?= $(addprefix azure-vhd-,$(VHD_TARGETS))
 AZURE_BUILD_SIG_NAMES	   ?= $(addprefix azure-sig-,$(SIG_TARGETS))
 AZURE_BUILD_SIG_GEN2_NAMES ?= $(addsuffix -gen2,$(addprefix azure-sig-,$(SIG_GEN2_TARGETS)))
 
-OCI_BUILD_NAMES			   ?= oci-ubuntu-1804 oci-ubuntu-2004 oci-ubuntu-2204 oci-oracle-linux-8
+OCI_BUILD_NAMES			   ?= oci-ubuntu-1804 oci-ubuntu-2004 oci-ubuntu-2204 oci-oracle-linux-8 oci-oracle-linux-9
 
 DO_BUILD_NAMES 			?=	do-centos-7 do-ubuntu-1804 do-ubuntu-2004
 
-OSC_BUILD_NAMES 			?=	osc-centos-7 osc-ubuntu-2004
+OSC_BUILD_NAMES 			?=	osc-ubuntu-2004
 
 QEMU_BUILD_NAMES			?=	qemu-ubuntu-1804 qemu-ubuntu-2004 qemu-centos-7 qemu-ubuntu-2004-efi qemu-rhel-8 qemu-rockylinux-8 qemu-flatcar
 QEMU_KUBEVIRT_BUILD_NAMES	:= $(addprefix kubevirt-,$(QEMU_BUILD_NAMES))
@@ -319,7 +336,7 @@ VBOX_BUILD_NAMES			?=      vbox-windows-2019
 
 POWERVS_BUILD_NAMES         ?= powervs-centos-8
 
-NUTANIX_BUILD_NAMES ?= nutanix-ubuntu-2004
+NUTANIX_BUILD_NAMES ?= nutanix-ubuntu-2004 nutanix-ubuntu-2204 nutanix-rockylinux-8 nutanix-rockylinux-9 nutanix-flatcar nutanix-windows-2022
 
 ## --------------------------------------
 ## Dynamic build targets
@@ -501,12 +518,12 @@ $(POWERVS_VALIDATE_TARGETS): deps-powervs
 .PHONY: $(NUTANIX_BUILD_TARGETS)
 $(NUTANIX_BUILD_TARGETS): deps-nutanix
 	packer init packer/nutanix/config.pkr.hcl
-	packer build $(PACKER_NODE_FLAGS) -var-file="packer/nutanix/nutanix.json" -var-file="$(abspath packer/nutanix/$(subst build-nutanix-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) packer/nutanix/packer.json
+	packer build $(if $(findstring windows,$@),$(PACKER_WINDOWS_NODE_FLAGS),$(PACKER_NODE_FLAGS)) -var-file="packer/nutanix/nutanix.json" -var-file="$(abspath packer/nutanix/$(subst build-nutanix-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) packer/nutanix/packer$(if $(findstring windows,$@),-windows,).json
 
 .PHONY: $(NUTANIX_VALIDATE_TARGETS)
 $(NUTANIX_VALIDATE_TARGETS): deps-nutanix
 	packer init packer/nutanix/config.pkr.hcl
-	packer validate $(PACKER_NODE_FLAGS) -var-file="packer/nutanix/nutanix.json" -var-file="$(abspath packer/nutanix/$(subst validate-nutanix-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) packer/nutanix/packer.json
+	packer validate $(if $(findstring windows,$@),$(PACKER_WINDOWS_NODE_FLAGS),$(PACKER_NODE_FLAGS)) -var-file="packer/nutanix/nutanix.json" -var-file="$(abspath packer/nutanix/$(subst validate-nutanix-,,$@).json)" $(ABSOLUTE_PACKER_VAR_FILES) packer/nutanix/packer$(if $(findstring windows,$@),-windows,).json
 
 ## --------------------------------------
 ## Dynamic clean targets
@@ -539,6 +556,7 @@ build-ami-amazon-2: ## Builds Amazon-2 Linux AMI
 build-ami-centos-7: ## Builds CentOS 7 AMI
 build-ami-ubuntu-1804: ## Builds Ubuntu 18.04 AMI
 build-ami-ubuntu-2004: ## Builds Ubuntu 20.04 AMI
+build-ami-ubuntu-2204: ## Builds Ubuntu 22.04 AMI
 build-ami-rockylinux-8: ## Builds RockyLinux 8 AMI
 build-ami-flatcar: ## Builds Flatcar
 build-ami-windows-2019: ## Build Windows Server 2019 AMI Packer config
@@ -577,6 +595,7 @@ build-do-all: $(DO_BUILD_TARGETS) ## Builds all DigitalOcean Snapshot
 
 build-gce-ubuntu-1804: ## Builds the GCE ubuntu-1804 image
 build-gce-ubuntu-2004: ## Builds the GCE ubuntu-2004 image
+build-gce-ubuntu-2204: ## Builds the GCE ubuntu-2204 image
 build-gce-all: $(GCE_BUILD_TARGETS) ## Builds all GCE image
 
 build-node-ova-local-centos-7: ## Builds CentOS 7 Node OVA w local hypervisor
@@ -658,16 +677,21 @@ build-oci-ubuntu-1804: ## Builds the OCI ubuntu-1804 image
 build-oci-ubuntu-2004: ## Builds the OCI ubuntu-2004 image
 build-oci-ubuntu-2204: ## Builds the OCI ubuntu-2204 image
 build-oci-oracle-linux-8: ## Builds the OCI Oracle Linux 8.x image
+build-oci-oracle-linux-9: ## Builds the OCI Oracle Linux 9.x image
 build-oci-all: $(OCI_BUILD_TARGETS) ## Builds all OCI image
 
 build-osc-ubuntu-2004: ## Builds Ubuntu 20.04 Outscale Snapshot
-build-osc-centos-7: ## Builds Centos 7 Outscale Snapshot
 build-osc-all: $(OSC_BUILD_TARGETS) ## Builds all Outscale Snapshot
 
 build-vbox-windows-2019: ## Builds for Windows Server 2019 Node VirtualBox w local hypervisor
 build-vbox-all: $(VBOX_BUILD_TARGETS) ## Builds all Qemu images
 
 build-nutanix-ubuntu-2004: ## Builds the Nutanix ubuntu-2004 image
+build-nutanix-ubuntu-2204: ## Builds the Nutanix ubuntu-2204 image
+build-nutanix-rockylinux-8: ## Builds the Nutanix Rocky Linux 8 image
+build-nutanix-rockylinux-9: ## Builds the Nutanix Rocky Linux 9 image
+build-nutanix-flatcar: ## Builds the Nutanix Flatcar image
+build-nutanix-windows-2022: ## Builds the Nutanix Windows 2022 image
 build-nutanix-all: $(NUTANIX_BUILD_TARGETS) ## Builds all Nutanix image
 
 ## --------------------------------------
@@ -680,6 +704,7 @@ validate-ami-rockylinux-8: ## Validates RockyLinux 8 AMI Packer config
 validate-ami-flatcar: ## Validates Flatcar AMI Packer config
 validate-ami-ubuntu-1804: ## Validates Ubuntu 18.04 AMI Packer config
 validate-ami-ubuntu-2004: ## Validates Ubuntu 20.04 AMI Packer config
+validate-ami-ubuntu-2204: ## Validates Ubuntu 22.04 AMI Packer config
 validate-ami-windows-2019: ## Validates Windows Server 2019 AMI Packer config
 validate-ami-windows-2004: ## Validates Windows Server 2004 SAC AMI Packer config
 validate-ami-all: $(AMI_VALIDATE_TARGETS) ## Validates all AMIs Packer config
@@ -713,6 +738,7 @@ validate-do-all: $(DO_VALIDATE_TARGETS) ## Validates all DigitalOcean Snapshot P
 
 validate-gce-ubuntu-1804: ## Validates Ubuntu 18.04 GCE Snapshot Packer config
 validate-gce-ubuntu-2004: ## Validates Ubuntu 20.04 GCE Snapshot Packer config
+validate-gce-ubuntu-2204: ## Validates Ubuntu 22.04 GCE Snapshot Packer config
 validate-gce-all: $(GCE_VALIDATE_TARGETS) ## Validates all GCE Snapshot Packer config
 
 validate-node-ova-local-centos-7: ## Validates CentOS 7 Node OVA Packer config w local hypervisor
@@ -763,10 +789,10 @@ validate-oci-ubuntu-1804: ## Validates the OCI ubuntu-1804 image packer config
 validate-oci-ubuntu-2004: ## Validates the OCI ubuntu-2004 image packer config
 validate-oci-ubuntu-2204: ## Validates the OCI ubuntu-2204 image packer config
 validate-oci-oracle-linux-8: ## Validates the OCI Oracle Linux 8.x image packer config
+validate-oci-oracle-linux-9: ## Validates the OCI Oracle Linux 9.x image packer config
 validate-oci-all: $(OCI_VALIDATE_TARGETS) ## Validates all OCI image packer config
 
 validate-osc-ubuntu-2004: ## Validates Ubuntu 20.04 Outscale Snapshot Packer config
-validate-osc-centos-7: ## Validates Centos 7 Outscale Snapshot Packer config
 validate-osc-all: $(OSC_VALIDATE_TARGETS) ## Validates all Outscale Snapshot Packer config
 
 validate-vbox-windows-2019: ## Validates Windows Server 2019 Node VirtualBox Packer config w local hypervisor
@@ -775,8 +801,13 @@ validate-vbox-all: $(VBOX_VALIDATE_TARGETS) ## Validates all RAW Packer config
 validate-powervs-centos-8: ## Validates the PowerVS CentOS image packer config
 validate-powervs-all: $(POWERVS_VALIDATE_TARGETS) ## Validates all PowerVS Packer config
 
-validate-nutanix-ubuntu-2004: ## Validates Ubuntu 20.04 Nutanix Snapshot Packer config
-validate-nutanix-all: $(NUTANIX_VALIDATE_TARGETS) ## Validates all Nutanix Snapshot Packer config
+validate-nutanix-ubuntu-2004: ## Validates Ubuntu 20.04 Nutanix Packer config
+validate-nutanix-ubuntu-2204: ## Validates Ubuntu 22.04 Nutanix Packer config
+validate-nutanix-rockylinux-8: ## Validates Rocky Linux 8 Nutanix Packer config
+validate-nutanix-rockylinux-9: ## Validates the Nutanix Rocky Linux 9 Nutanix Packer config
+validate-nutanix-flatcar: ## Validates the Nutanix Flatcar Nutanix Packer config
+validate-nutanix-windows-2022: ## Validates Windows Server 2022 Nutanix Packer config
+validate-nutanix-all: $(NUTANIX_VALIDATE_TARGETS) ## Validates all Nutanix Packer config
 
 validate-all: validate-ami-all \
 	validate-azure-all \
