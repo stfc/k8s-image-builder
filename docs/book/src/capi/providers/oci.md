@@ -70,7 +70,7 @@ PACKER_VAR_FILES=oci.json make build-oci-oracle-linux-8
 #### Build an Arm based image
 
 Building an Arm based image requires some overrides to use the correct installation files . An example for an 
-`oci.json` file  for Arm is shown below. The parameters for containerd, crictl and kubernetes 
+`oci.json` file  for Arm is shown below. The parameters for containerd, crictl and Kubernetes 
 has to point to the corresponding URL for Arm. The containerd SHA can be changed appropriately, the containerd version
 is defined in images/capi/packer/config/containerd.json.
 
@@ -89,11 +89,10 @@ is defined in images/capi/packer/config/containerd.json.
 
 ### Building a Windows image
 
-> NOTE: In order to use Windows with CAPI a Baremetal instance is required. This means a Baremetal instance is required for building the image as well. The OCIDs for the 2019
-and 2022 Datacenter edition of Windows can be found in their respective documentation:
+> NOTE: In order to use Windows with CAPI a Baremetal instance is required. This means a Baremetal instance is required for
+> building the image as well. The OCIDs for the 2019 Datacenter edition of Windows can be found in their documentation:
 >
-> - [Windows server 2019](https://docs.oracle.com/en-us/iaas/images/windows-server-2019-bm/)
-> - [Windows server 2022](https://docs.oracle.com/en-us/iaas/images/windows-server-2022-bm/)
+> - [Windows server 2019](https://docs.oracle.com/en-us/iaas/images/image/ffa1ec8d-694e-4df7-b5ec-3e8061a7ecdf/)
 
 > NOTE: It is important to make sure the shape used at image build time is used when launching an instance.
 >
@@ -106,13 +105,18 @@ and 2022 Datacenter edition of Windows can be found in their respective document
 |----------|-------------|---------|---------|
 | `OPC_USER_PASSWORD` | The password to set the OPC user to when creating the image. This will be used for accessing instances using this image. |  | Yes |
 
+> NOTE: Your new password must be at least 12 characters long and must comply with
+[Microsoft's password policy](https://technet.microsoft.com/library/hh994562(v=ws.11).aspx?f=255&MSPPError=-2147217396).
+If the password doesn't comply WinRM will fail to connect to the instance since the
+password failed to be updated.
+
 > NOTE: The `OPC_USER_PASSWORD` will be set in the `winrm_bootstrap.txt` file temporarily, while building the image.
-  This is required in order for winrm to access the instance building the image. Once the build process is complete
+  This is required in order for WinRM to access the instance building the image. Once the build process is complete
   the password will be deleted along with the fil so the password isn't stored long term in a cleartext file.
 
 #### Build a Windows based image
 
-The following example json would use the [Windows Server 2019 Datacenter Edition BM E4 image in the us-ashburn-1 region](https://docs.oracle.com/en-us/iaas/images/image/4d56c93a-2165-49b0-9c6e-f9e9a9b05011/).
+The following example JSON would use the [Windows Server 2019 Datacenter Edition BM E4 image in the us-ashburn-1 region](https://docs.oracle.com/en-us/iaas/images/image/ffa1ec8d-694e-4df7-b5ec-3e8061a7ecdf/).
 
 ```json
 {
