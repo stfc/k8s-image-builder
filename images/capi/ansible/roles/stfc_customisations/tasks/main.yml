@@ -11,6 +11,11 @@
     state: directory
     recurse: yes
 
+- name: Create a file to hold the Nvidia container config
+  file:
+    path: /etc/containerd/conf.d/nvidia.toml
+    state: touch
+
 - name: Copy config to point CRI to /etc/containerd/certs.d
   copy:
     src: cri-registry.toml
