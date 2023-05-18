@@ -1,4 +1,4 @@
-# Copyright 2021 The Kubernetes Authors.
+# Copyright 2020 The Kubernetes Authors.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ---
-networkd_dispatcher_download_url: "https://gitlab.com/craftyguy/networkd-dispatcher/-/archive/2.1/networkd-dispatcher-2.1.tar.gz"
-packer_builder_type: ""
-build_target: "virt"
+- name: Install cloud-init packages
+  apt:
+    name: "{{ packages }}"
+    state: present
+    force_apt_get: yes
+  vars:
+    packages:
+    - cloud-init
+    - cloud-guest-utils
+    - cloud-initramfs-copymods
+    - cloud-initramfs-dyn-netconf
+  when: ansible_os_family == "Debian"
+
+- name: Disable Hyper-V KVP protocol daemon on Ubuntu
+  systemd:
+    name: hv-kvp-daemon
+    state: stopped
+    enabled: false
+  when: ansible_os_family == "Debian"
