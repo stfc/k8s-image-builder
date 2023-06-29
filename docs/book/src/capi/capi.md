@@ -61,10 +61,10 @@ Several variables can be used to customize the image build.
 | `extra_rpms` | This can be set to a space delimited string containing the names of additional RPM packages to install | `""` |
 | `http_proxy` | This can be set to URL to use as an HTTP proxy during the Ansible stage of building | `""` |
 | `https_proxy` | This can be set to URL to use as an HTTPS proxy during the Ansible stage of building | `""` |
-| `kubernetes_deb_version` | This can be set to the version of Kubernetes which will be installed in debian based image | `"1.24.11-00"` |
-| `kubernetes_rpm_version` | This can be set to the version of Kubernetes which will be installed in rpm based image | `"1.24.11-0"` |
-| `kubernetes_semver` | This can be set to semantic verion of Kubernetes which will be installed in the image | `"v1.24.11"` |
-| `kubernetes_series` | This can be set to series version Kubernetes which will be installed in the image | `"v1.24"` |
+| `kubernetes_deb_version` | This can be set to the version of Kubernetes which will be installed in debian based image | `"1.25.10-00"` |
+| `kubernetes_rpm_version` | This can be set to the version of Kubernetes which will be installed in rpm based image | `"1.25.10-0"` |
+| `kubernetes_semver` | This can be set to semantic verion of Kubernetes which will be installed in the image | `"v1.25.10"` |
+| `kubernetes_series` | This can be set to series version Kubernetes which will be installed in the image | `"v1.25"` |
 | `no_proxy` | This can be set to a comma-delimited list of domains that should be excluded from proxying during the Ansible stage of building | `""` |
 | `reenable_public_repos` | If set to `"false"`, the package repositories disabled by setting `disable_public_repos` will remain disabled at the end of the build. | `"true"` |
 | `remove_extra_repos` | If set to `"true"`, the package repositories added to the OS through the use of `extra_repos` will be removed at the end of the build. | `"false"` |
@@ -181,6 +181,14 @@ PACKER_VAR_FILES=proxy.json make build-node-ova-local-photon-3
   "additional_executables": "true",
   "additional_executables_destination_path": "/path/to/dest",
   "additional_executables_list": "http://path/to/exec1,http://path/to/exec2",
+  "additional_s3": "true",
+  "additional_s3_endpoint": "https://path-to-s3-endpoint",
+  "additional_s3_access": "S3_ACCESS_KEY",
+  "additional_s3_secret": "S3_SECRET_KEY",
+  "additional_s3_bucket": "some-bucket",
+  "additional_s3_object": "path/to/object",
+  "additional_s3_destination_path": "/path/to/dest",
+  "additional_s3_ceph": "true",
   "additional_registry_images": "true",
   "additional_registry_images_list": "plndr/kube-vip:0.3.4,plndr/kube-vip:0.3.3",
   "additional_url_images": "true",

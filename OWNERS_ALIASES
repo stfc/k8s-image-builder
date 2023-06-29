@@ -2,13 +2,12 @@
 
 aliases:
   image-builder-maintainers:
+    - AverageMarcus
     - jsturtevant
     - kkeshavamurthy
     - mboersma
   image-builder-reviewers:
-    - EleanorRigby
     - randomvariable
-    - AverageMarcus
   image-builder-azure-reviewers:
     - jsturtevant
     - mboersma
@@ -45,16 +44,11 @@ aliases:
     - mboersma
   cluster-api-gcp-maintainers:
     - cpanato
-    - detiber
     - dims
-    - gab-satchi
-    - justinsb
-    - krousey
-    - rsmitty
-    - vincepri
+    - richardcase
   cluster-api-digitalocean-maintainers:
     - cpanato
-    - MorrisLaw
+    - gottwald
     - prksu
     - timoreimann
   cluster-api-openstack-maintainers:
